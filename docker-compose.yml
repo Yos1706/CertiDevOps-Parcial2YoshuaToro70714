@@ -13,10 +13,8 @@ services:
       POSTGRES_PASSWORD: password_segura
       POSTGRES_DB: app_db
     volumes:
-      # Persistencia de datos en un volumen nombrado
       - postgres_data:/var/lib/postgresql/data
     ports:
-      # Sólo exponemos el puerto para fines de desarrollo/debugging local
       - "5432:5432"
 
   # --------------------
@@ -28,16 +26,18 @@ services:
       dockerfile: Dockerfile
     container_name: backend_api
     restart: always
-    # Expone el puerto de la API (ej. 5000)
     ports:
       - "5000:5000"
     environment:
       NODE_ENV: development
-      DB_HOST: db        # Usa el nombre del servicio de Docker Compose para la conexión
-      DB_PORT: 5432
-      DB_USER: user
-      DB_PASSWORD: password_segura
-      DB_NAME: app_db
+      
+      # CORRECCIÓN CRÍTICA AQUÍ: Renombrar para que coincida con server.js
+      POSTGRES_USER: user             # Antes DB_USER
+      POSTGRES_PASSWORD: password_segura # Antes DB_PASSWORD
+      POSTGRES_DB: app_db             # Antes DB_NAME
+      DB_HOST: db                     # Este nombre es correcto para el host
+      DB_PORT: 5432                   # Este nombre es correcto para el puerto
+      
     depends_on:
       - db
 
@@ -50,11 +50,9 @@ services:
       dockerfile: Dockerfile
     container_name: frontend_spa
     restart: always
-    # Expone el puerto de la SPA (ej. 3000)
     ports:
       - "3000:3000"
     environment:
-      # Variable para que el frontend sepa dónde buscar la API
       REACT_APP_API_URL: http://localhost:5000
     depends_on:
       - backend
