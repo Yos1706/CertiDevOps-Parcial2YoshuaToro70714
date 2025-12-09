@@ -1,43 +1,38 @@
-# ----------------------------------------------------
-# STAGE 1: BUILD (Compilación de la aplicación estática)
-# ----------------------------------------------------
-# Usamos una imagen de Node para instalar dependencias y compilar el código.
-FROM node:20-alpine AS builder
+# Stage 1: Build the application
+FROM node:20-alpine AS build
 
-# Establece variables de entorno si son necesarias durante la compilación
-# Ejemplo: RUN envsubst '$$REACT_APP_API_URL' < ./src/config.js > ./src/config.temp.js
-
+# Create app directory
 WORKDIR /app
 
-# 1. Copia los archivos de definición de dependencias
+# Copy package files and install dependencies
 COPY package*.json ./
-
-# 2. Instala las dependencias
 RUN npm install
 
-# 3. Copia el resto del código fuente
+# Copy source code
 COPY . .
 
-# 4. Ejecuta el comando de compilación (esto crea la carpeta 'build' o 'dist')
-# NOTA: Ajusta el comando 'run build' según tu framework (ej. 'npm run build' o 'ng build')
+# Build the frontend (adjust this command based on your actual build process, e.g., vite/webpack)
 RUN npm run build
 
-# ----------------------------------------------------
-# STAGE 2: PRODUCTION (Servir los archivos estáticos con Nginx)
-# ----------------------------------------------------
-# Usamos la imagen oficial de Nginx, que es muy pequeña y está optimizada para servir archivos estáticos.
+# Stage 2: Serve the application with Nginx (Lightweight)
 FROM nginx:alpine
 
-# Copia la configuración personalizada de Nginx (Opcional: solo si necesitas modificarlo)
-# COPY ./nginx/nginx.conf /etc/nginx/conf.d/default.conf
+# Create non-root user (UID 1001) for security, necessary for volume mounts in docker-compose
+RUN addgroup -g 1001 node \
+    && adduser -u 1001 -G node -s /bin/sh -D node
 
-# Copia los archivos estáticos compilados desde la etapa 'builder' al directorio de Nginx.
-# NOTA: La carpeta de salida de la compilación puede ser 'build', 'dist', o 'www'.
-# Asegúrate de usar la ruta correcta (ej: /app/build)
-COPY --from=builder /app/build /usr/share/nginx/html
+# Copy build output from the build stage
+COPY --from=build /app/dist /usr/share/nginx/html
 
-# Permite que el contenedor escuche en el puerto 80 (puerto por defecto de Nginx)
+# Copy custom Nginx configuration (assuming you have one, or use default)
+# COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Switch to non-root user
+# Note: Nginx usually runs as root, so we ensure the entrypoint is ready for the user change
+USER 1001
+
+# Expose the application port
 EXPOSE 80
 
-# El comando CMD predeterminado de Nginx ya es iniciar el servidor, así que no es necesario sobreescribirlo.
-# CMD ["nginx", "-g", "daemon off;"]
+# Command to run Nginx
+CMD ["nginx", "-g", "daemon off;"]
