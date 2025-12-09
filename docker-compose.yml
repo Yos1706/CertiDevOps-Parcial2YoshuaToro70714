@@ -51,7 +51,7 @@ services:
     container_name: frontend_spa
     restart: always
     ports:
-      - "80:3000" # ✅ CORRECCIÓN 1: Mapea el puerto 80 externo (navegador) al 3000 interno.
+      - "80:80" # CORRECCIÓN: Nginx escucha en el 80
     environment:
       # ✅ CORRECCIÓN 2: Usa el nombre del servicio 'backend' para la comunicación interna de Docker.
       REACT_APP_API_URL: http://backend:5000 
