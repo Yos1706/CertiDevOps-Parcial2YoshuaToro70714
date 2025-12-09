@@ -48,24 +48,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         
-      # === NUEVO PASO CRÍTICO ===
-      - name: Setup Docker Compose
-        uses: docker/setup-buildx-action@v3
-        
-      # Asegura la compatibilidad con el comando 'docker-compose'
-      - name: Install Docker Compose
+      # === 🚨 CORRECCIÓN FINAL: Instalación de docker-compose V1 mediante descarga directa ===
+      # Este método es el más fiable, ya que no depende de 'apt-get' o de plugins que falten.
+      - name: Install Docker Compose (Direct Download)
         run: |
-          sudo apt-get update
-          sudo apt-get install -y docker-compose-plugin
-          sudo ln -s /usr/libexec/docker/cli-plugins/docker-compose /usr/local/bin/docker-compose
-      # =========================
+          DOCKER_COMPOSE_VERSION="1.29.2"
+          # Descarga el binario para la arquitectura del runner
+          sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          # Hace el binario ejecutable
+          sudo chmod +x /usr/local/bin/docker-compose
+      # ==================================================================================
 
-      # Ahora, el comando docker-compose funcionará
       - name: Build Docker Images
         run: sudo docker-compose build
 
-      # Guardar las imágenes construidas en un archivo .tar
       - name: Save Images as Artifact
+        # Los nombres de las imágenes deben coincidir con las generadas por docker-compose
         run: sudo docker save certidevops-parcial2yoshuatoro70714_backend certidevops-parcial2yoshuatoro70714_frontend -o images.tar
         
       - name: Upload Images Artifact
@@ -78,7 +76,7 @@ jobs:
   # JOB 3: DEPLOY A EC2 (Usando SSH)
   # ===============================================
   deploy:
-    needs: [build-images] # Depende de que las imágenes se construyan
+    needs: [build-images]
     runs-on: ubuntu-latest
     steps:
       - name: Download Docker Images Artifact
@@ -96,7 +94,7 @@ jobs:
           script: |
             echo "Conectado al servidor EC2..."
             
-            # 1. Navegar al directorio y actualizar código (necesario por si docker-compose.yml cambia)
+            # 1. Navegar al directorio y actualizar código (por si docker-compose.yml cambia)
             cd ${{ env.DEPLOY_PATH }}
             git pull
 
@@ -108,7 +106,7 @@ jobs:
             echo "Cargando nuevas imágenes desde images.tar..."
             sudo docker load -i images.tar
 
-            # 4. Levantar los servicios con las imágenes recién cargadas (recrea solo si es necesario)
+            # 4. Levantar los servicios
             echo "Desplegando nuevos contenedores..."
             sudo docker-compose up -d
             
