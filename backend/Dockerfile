@@ -10,10 +10,6 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instala dependencias de producción. 
-# Si tu proyecto tiene pruebas que usan devDependencies, puedes instalar todas aquí 
-# y luego usar 'npm prune --production' para limpiar, o simplemente instalar todas.
-# Por simplicidad y eficiencia, instalaremos todo lo necesario para producción.
-# Si necesitas pruebas, puedes añadir un paso de 'npm install' y 'npm test' aquí.
 RUN npm install
 
 # Copia el código fuente (después de instalar las dependencias para aprovechar el caché)
@@ -28,7 +24,7 @@ COPY . .
 # Usamos una imagen base aún más pequeña y segura (node:20-alpine)
 FROM node:20-alpine
 
-# Define un usuario no root para seguridad (si el proyecto lo permite)
+# Define un usuario no root para seguridad (UID 1001)
 RUN addgroup -g 1001 appgroup && adduser -u 1001 -G appgroup -s /bin/sh -D appuser
 USER appuser
 
@@ -46,6 +42,5 @@ COPY --from=builder /app ./
 # Expone el puerto que la API usa (ej. 5000)
 EXPOSE 5000
 
-# Comando para iniciar la aplicación (debe ser el último)
-CMD ["node", "src/index.js"] 
-# Asegúrate de que "src/server.js" sea el archivo de entrada real de tu backend.
+# Línea CRÍTICA corregida: Usar index.js como punto de entrada
+CMD ["node", "src/index.js"]
