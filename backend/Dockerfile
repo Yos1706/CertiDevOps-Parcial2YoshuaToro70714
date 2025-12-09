@@ -47,5 +47,5 @@ COPY --from=builder /app ./
 EXPOSE 5000
 
 # Comando para iniciar la aplicación (debe ser el último)
-CMD ["node", "src/server.js"] 
+CMD ["node", "src/index.js"] 
 # Asegúrate de que "src/server.js" sea el archivo de entrada real de tu backend.
