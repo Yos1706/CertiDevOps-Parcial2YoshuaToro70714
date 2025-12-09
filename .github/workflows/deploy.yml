@@ -60,7 +60,7 @@ jobs:
       # ==================================================================================
 
       - name: Build Docker Images
-        run: sudo docker-compose build
+        run: sudo docker-compose build --no-cache
 
       - name: Save Images as Artifact
         # Los nombres de las imágenes deben coincidir con las generadas por docker-compose
