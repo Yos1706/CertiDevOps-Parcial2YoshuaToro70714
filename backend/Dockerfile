@@ -43,4 +43,4 @@ COPY --from=builder /app ./
 EXPOSE 5000
 
 # Línea CRÍTICA corregida: Usar index.js como punto de entrada
-CMD ["node", "src/index.js"]
+CMD ["node", "src/server.js"]
