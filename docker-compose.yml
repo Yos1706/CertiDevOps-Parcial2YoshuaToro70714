@@ -27,16 +27,16 @@ services:
     container_name: backend_api
     restart: always
     ports:
-      - "0.0.0.0:5000:5000"
+      - "5000:5000"  # Mantiene el mapeo 5000:5000 para acceso directo al API (http://EC2_IP:5000)
     environment:
       NODE_ENV: development
       
-      # CORRECCIÓN CRÍTICA AQUÍ: Renombrar para que coincida con server.js
-      POSTGRES_USER: user             # Antes DB_USER
-      POSTGRES_PASSWORD: password_segura # Antes DB_PASSWORD
-      POSTGRES_DB: app_db             # Antes DB_NAME
-      DB_HOST: db                     # Este nombre es correcto para el host
-      DB_PORT: 5432                   # Este nombre es correcto para el puerto
+      # Variables de DB para el backend
+      POSTGRES_USER: user 
+      POSTGRES_PASSWORD: password_segura
+      POSTGRES_DB: app_db 
+      DB_HOST: db 
+      DB_PORT: 5432 
       
     depends_on:
       - db
@@ -51,9 +51,10 @@ services:
     container_name: frontend_spa
     restart: always
     ports:
-      - "3000:3000"
+      - "80:3000" # ✅ CORRECCIÓN 1: Mapea el puerto 80 externo (navegador) al 3000 interno.
     environment:
-      REACT_APP_API_URL: http://localhost:5000
+      # ✅ CORRECCIÓN 2: Usa el nombre del servicio 'backend' para la comunicación interna de Docker.
+      REACT_APP_API_URL: http://backend:5000 
     depends_on:
       - backend
 
