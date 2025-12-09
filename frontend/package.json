@@ -16,6 +16,6 @@
     "react-dom": "^18.3.1"
   }
   "devDependencies": {
-    "react-scripts": "5.0.1" <--- ¡Añadido/Confirmado! Necesario para el comando 'build'
+    "react-scripts": "5.0.1" 
   }
 }
