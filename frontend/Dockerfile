@@ -29,6 +29,7 @@ COPY --from=build /app/build /usr/share/nginx/html
 
 # Switch to non-root user
 # Note: Nginx usually runs as root, so we ensure the entrypoint is ready for the user change
+RUN mkdir -p /var/cache/nginx/client_temp && chown -R 1001:1001 /var/cache/nginx
 USER 1001
 
 # Expose the application port
