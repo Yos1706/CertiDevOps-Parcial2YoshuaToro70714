@@ -45,7 +45,6 @@ jobs:
           npm install
           # npm test
           
----
   # ----------------------------------------------------
   # JOB 2: BUILD & PUSH DOCKER IMAGES (Contenerización)
   # ----------------------------------------------------
@@ -86,7 +85,6 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_FRONTEND }}:${{ github.sha }}
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.DOCKER_IMAGE_FRONTEND }}:latest
 
----
   # ----------------------------------------------------
   # JOB 3: DEPLOY TO EC2 (Despliegue con SSH)
   # ----------------------------------------------------
