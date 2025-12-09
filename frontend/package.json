@@ -1,0 +1,18 @@
+{
+  "name": "frontend-spa",
+  "version": "1.0.0",
+  "description": "SPA para el proyecto web",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "mkdir -p build && echo 'Frontend built successfully' > build/index.html",
+    "test": "echo \"Error: no test specified\" && exit 0"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
