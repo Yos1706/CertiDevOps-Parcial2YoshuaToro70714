@@ -5,15 +5,13 @@
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 0" 
-    // ^ Si añades pruebas, reemplaza este comando.
+    "test": "echo \"Error: no test specified\" && exit 0"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
     "express": "^4.19.2",
-    "pg": "^8.11.5" 
-    // ^ Añade aquí las dependencias que uses (ej. pg para PostgreSQL)
+    "pg": "^8.11.5"
   }
 }
