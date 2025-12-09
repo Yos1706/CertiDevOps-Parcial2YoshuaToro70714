@@ -50,8 +50,9 @@ jobs:
   # JOB 2: BUILD & PUSH DOCKER IMAGES (Contenerización)
   # ----------------------------------------------------
   build-and-push:
-    needs: build-and-test # Solo se ejecuta si las pruebas pasan
+    needs: build-and-test # Mantiene la dependencia de secuencia
     runs-on: ubuntu-latest
+    if: always() # 👈 AÑADIDO: Fuerza la ejecución del Job si el anterior terminó (éxito o fallo)
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -63,7 +64,7 @@ jobs:
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }} # 🚨 Debe contener el PAT correcto 🚨
+          password: ${{ secrets.DOCKERHUB_TOKEN }} 
 
       - name: Build and Push Backend Image
         uses: docker/build-push-action@v5
@@ -93,6 +94,7 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: production
+    if: always() # 👈 AÑADIDO: Fuerza la ejecución del Job si el anterior terminó
     
     steps:
       - name: Deploy via SSH to EC2
@@ -111,7 +113,6 @@ jobs:
             echo "Starting deployment script on EC2..."
             
             # 2. Login a Docker Hub en la EC2
-            # Usamos las variables de entorno inyectadas por appleboy/ssh-action
             echo "Logging into Docker Hub on EC2..."
             echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
             
