@@ -1,0 +1,113 @@
+# .github/workflows/deploy.yml
+name: CI/CD Pipeline - Build and Deploy to EC2
+
+# Se ejecuta en push a 'main' y también se puede ejecutar manualmente
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  # Host y Usuario para SSH (usa los secrets configurados)
+  SSH_USER: ubuntu
+  # Directorio donde se ejecutará docker-compose en la EC2
+  DEPLOY_PATH: ~/CertiDevOps-Parcial2YoshuaToro70714
+
+jobs:
+
+  # ===============================================
+  # JOB 1: INSTALACIÓN Y VERIFICACIÓN
+  # ===============================================
+  ci-setup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' 
+          
+      - name: Install Backend Dependencies
+        run: npm install
+        working-directory: ./backend
+
+      - name: Install Frontend Dependencies
+        run: npm install
+        working-directory: ./frontend
+
+  # ===============================================
+  # JOB 2: CONSTRUIR IMÁGENES DOCKER
+  # ===============================================
+  build-images:
+    needs: [ci-setup]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        
+      # === 🚨 CORRECCIÓN FINAL: Instalación de docker-compose V1 mediante descarga directa ===
+      # Este método es el más fiable, ya que no depende de 'apt-get' o de plugins que falten.
+      - name: Install Docker Compose (Direct Download)
+        run: |
+          DOCKER_COMPOSE_VERSION="1.29.2"
+          # Descarga el binario para la arquitectura del runner
+          sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+          # Hace el binario ejecutable
+          sudo chmod +x /usr/local/bin/docker-compose
+      # ==================================================================================
+
+      - name: Build Docker Images
+        run: sudo docker-compose build
+
+      - name: Save Images as Artifact
+        # Los nombres de las imágenes deben coincidir con las generadas por docker-compose
+        run: sudo docker save certidevops-parcial2yoshuatoro70714_backend certidevops-parcial2yoshuatoro70714_frontend -o images.tar
+        
+      - name: Upload Images Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-images
+          path: images.tar
+          
+  # ===============================================
+  # JOB 3: DEPLOY A EC2 (Usando SSH)
+  # ===============================================
+  deploy:
+    needs: [build-images]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Docker Images Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-images
+          path: .
+          
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ env.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            echo "Conectado al servidor EC2..."
+            
+            # 1. Navegar al directorio y actualizar código (por si docker-compose.yml cambia)
+            cd ${{ env.DEPLOY_PATH }}
+            git pull
+
+            # 2. Detener y remover servicios viejos
+            echo "Deteniendo contenedores viejos..."
+            sudo docker-compose down
+
+            # 3. Cargar las nuevas imágenes desde el artefacto transferido
+            echo "Cargando nuevas imágenes desde images.tar..."
+            sudo docker load -i images.tar
+
+            # 4. Levantar los servicios
+            echo "Desplegando nuevos contenedores..."
+            sudo docker-compose up -d
+            
+            echo "Despliegue completado. Verificar en http://${{ secrets.EC2_HOST }}/"
