@@ -29,7 +29,7 @@ COPY . .
 FROM node:20-alpine
 
 # Define un usuario no root para seguridad (si el proyecto lo permite)
-RUN addgroup -g 1000 appgroup && adduser -u 1000 -G appgroup -s /bin/sh -D appuser
+RUN addgroup -g 1001 appgroup && adduser -u 1001 -G appgroup -s /bin/sh -D appuser
 USER appuser
 
 # Establece el directorio de trabajo
