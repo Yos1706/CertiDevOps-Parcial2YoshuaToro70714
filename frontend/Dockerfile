@@ -8,6 +8,12 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# === 🚨 CAMBIO CRÍTICO: Invalida la caché del código fuente ===
+# Crea un archivo con un timestamp único o toca los archivos principales.
+# Usaremos 'touch' en el index.js y package.json para forzar la invalidación
+RUN touch ./package.json ./src/index.js 
+# =============================================================
+
 # Copy source code
 COPY . .
 
