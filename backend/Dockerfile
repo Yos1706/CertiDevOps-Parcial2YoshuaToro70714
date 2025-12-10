@@ -10,7 +10,6 @@ WORKDIR /app
 COPY package*.json ./
 
 # Instala dependencias de producción.
-# Si el proyecto tuviera dependencias de desarrollo, usaríamos: RUN npm install --production
 RUN npm install
 
 # Copia el código fuente (después de instalar las dependencias)
@@ -37,5 +36,4 @@ COPY --from=builder /app/ ./
 # Expone el puerto que la API usa (ej. 5000)
 EXPOSE 5000
 
-# 🚨 CORRECCIÓN CRÍTICA: Comando de inicio limpio y directo
 CMD [ "node", "server.js" ]
