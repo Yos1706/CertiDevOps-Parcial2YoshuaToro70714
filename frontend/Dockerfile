@@ -28,17 +28,9 @@ RUN addgroup -g 1001 node \
 # 2. Copiar la configuración de Nginx
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# 🚨 CAMBIO CLAVE: Copia el index.html base primero y luego el resto de los archivos.
-# Esto garantiza que el archivo index.html (que tiene el <div id="root">) se copie desde la carpeta public/
-# Si usas la configuración 'COPY --from=build /app/build /usr/share/nginx/html',
-# Docker toma la plantilla del bundler, que parece estar incompleta.
-
-# Eliminamos la dependencia de /app/build y copiamos todo el contexto.
-# Si tu Nginx.conf está configurado para buscar archivos estáticos, esto debería funcionar.
 
 # Copia los archivos de producción (bundle) y la plantilla index.html
 COPY --from=build /app/build /usr/share/nginx/html
-# === LÍNEA ADICIONAL DE SOLUCIÓN ANTERIOR (DEBE QUEDAR) ===
 COPY ./public/index.html /usr/share/nginx/html/index.html
 # ===========================================================
 
