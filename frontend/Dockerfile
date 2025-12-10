@@ -4,20 +4,14 @@ FROM node:20-alpine AS build
 # Create app directory
 WORKDIR /app
 
-# Copy package files and install dependencies
-COPY package*.json ./
+# Copy ALL files necessary for the build now (including src and public)
+# Esto invalida la caché si cualquier archivo cambia
+COPY . .  
+
+# Install dependencies
 RUN npm install
 
-# === 🚨 CAMBIO CRÍTICO: Invalida la caché del código fuente ===
-# Crea un archivo con un timestamp único o toca los archivos principales.
-# Usaremos 'touch' en el index.js y package.json para forzar la invalidación
-RUN touch ./package.json ./src/index.js 
-# =============================================================
-
-# Copy source code
-COPY . .
-
-# Build the frontend (adjust this command based on your actual build process, e.g., vite/webpack)
+# Build the frontend 
 RUN npm run build
 
 # Stage 2: Serve the application with Nginx (Lightweight)
