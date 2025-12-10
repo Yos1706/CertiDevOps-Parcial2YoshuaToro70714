@@ -1,7 +1,6 @@
 # .github/workflows/deploy.yml
-name: CI/CD Pipeline - Build and Deploy to EC2
+name: CI/CD Pipeline - Build and Deploy to EC2 (Docker Hub Registry)
 
-# Se ejecuta en push a 'main' y también se puede ejecutar manualmente
 on:
   push:
     branches:
@@ -9,15 +8,15 @@ on:
   workflow_dispatch:
 
 env:
-  # Host y Usuario para SSH (usa los secrets configurados)
   SSH_USER: ubuntu
-  # Directorio donde se ejecutará docker-compose en la EC2
-  DEPLOY_PATH: ~/CertiDevOps-Parcial2YoshuaToro70714
+  DEPLOY_PATH: CertiDevOps-Parcial2YoshuaToro70714
+  # Variable para el tag de imagen (usa el SHA corto del commit)
+  IMAGE_TAG: ${{ github.sha }}
 
 jobs:
 
   # ===============================================
-  # JOB 1: INSTALACIÓN Y VERIFICACIÓN
+  # JOB 1: CI SETUP (Instalación y Verificación)
   # ===============================================
   ci-setup:
     runs-on: ubuntu-latest
@@ -28,7 +27,9 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' 
+          node-version: '20'
+          
+      # Se asume que aquí irían las pruebas unitarias (run: npm test)
           
       - name: Install Backend Dependencies
         run: npm install
@@ -37,83 +38,83 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm install
         working-directory: ./frontend
+        
+      # (Este job puede ser opcional si no tienes tests, pero es buena práctica)
 
   # ===============================================
-  # JOB 2: CONSTRUIR IMÁGENES DOCKER
+  # JOB 2: CONSTRUIR Y SUBIR IMÁGENES (PUSH a Docker Hub)
   # ===============================================
-  build-images:
-    needs: [ci-setup]
+  build-and-push:
+    # Necesita que el setup haya terminado (si usas tests, que pasen)
+    needs: [ci-setup] 
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
         
-      # === 🚨 CORRECCIÓN FINAL: Instalación de docker-compose V1 mediante descarga directa ===
-      # Este método es el más fiable, ya que no depende de 'apt-get' o de plugins que falten.
-      - name: Install Docker Compose (Direct Download)
-        run: |
-          DOCKER_COMPOSE_VERSION="1.29.2"
-          # Descarga el binario para la arquitectura del runner
-          sudo curl -L "https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-          # Hace el binario ejecutable
-          sudo chmod +x /usr/local/bin/docker-compose
-      # ==================================================================================
-
-      - name: Build Docker Images
-        run: sudo docker-compose build --no-cache --force-rm
-
-      - name: Save Images as Artifact
-        # Los nombres de las imágenes deben coincidir con las generadas por docker-compose
-        run: sudo docker save certidevops-parcial2yoshuatoro70714_backend certidevops-parcial2yoshuatoro70714_frontend -o images.tar
-
-        # === NUEVO PASO CRÍTICO: CAMBIAR PROPIETARIO ===
-      - name: Change Artifact Ownership
-        # El comando 'chown' cambia el propietario al usuario del runner (UID 1001)
-        run: sudo chown $USER:$USER images.tar
-      # ==============================================
-        
-      - name: Upload Images Artifact
-        uses: actions/upload-artifact@v4
+      - name: 1. Login a Docker Hub
+        # Utiliza un action para autenticar al runner con los secretos
+        uses: docker/login-action@v3
         with:
-          name: docker-images
-          path: images.tar
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
           
+      # 🚨 IMPORTANTE: Se usa la variable DOCKERHUB_USERNAME para el tag de la imagen
+      # Esto asegura que la imagen sea tageada como "usuario/repo:tag"
+
+      - name: 2. 🐋 Construir y Subir Imagen del Frontend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-frontend-spa:${{ env.IMAGE_TAG }}, ${{ secrets.DOCKERHUB_USERNAME }}/my-frontend-spa:latest
+          
+      - name: 3. 🐳 Construir y Subir Imagen del Backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/my-backend-api:${{ env.IMAGE_TAG }}, ${{ secrets.DOCKERHUB_USERNAME }}/my-backend-api:latest
+
   # ===============================================
-  # JOB 3: DEPLOY A EC2 (Usando SSH)
+  # JOB 3: DEPLOY A EC2 (Usando PULL del Registry)
   # ===============================================
   deploy:
-    needs: [build-images]
+    # Este job SOLO se ejecuta si build-and-push fue exitoso
+    needs: [build-and-push] 
     runs-on: ubuntu-latest
     steps:
-      - name: Download Docker Images Artifact
-        uses: actions/download-artifact@v4
+      
+      - name: 1. Checkout Código Fuente (Necesario para el docker-compose.yml actualizado)
+        uses: actions/checkout@v4
+        
+      - name: 2. Configurar Clave SSH Privada
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          name: docker-images
-          path: .
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
           
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ env.SSH_USER }}
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            echo "Conectado al servidor EC2..."
-            
-            # 1. Navegar al directorio y actualizar código (por si docker-compose.yml cambia)
-            cd ${{ env.DEPLOY_PATH }}
-            git pull
+      - name: 3. Ejecutar Despliegue Remoto (SSH)
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ env.SSH_USER }}@${{ secrets.EC2_HOST }} "
+          
+          # 3.1. Navegar y Actualizar Código (Para obtener el docker-compose.yml con los tags de Docker Hub)
+          cd ~/${{ env.DEPLOY_PATH }} && 
+          git pull origin main && 
 
-            # 2. Detener y remover servicios viejos
-            echo "Deteniendo contenedores viejos..."
-            sudo docker-compose down
+          # 3.2. Login en EC2 (Necesario para poder hacer docker-compose pull)
+          # Utiliza los mismos secretos para autenticar el daemon de Docker en la EC2
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }} && 
 
-            # 3. Cargar las nuevas imágenes desde el artefacto transferido
-            echo "Cargando nuevas imágenes desde images.tar..."
-            sudo docker load -i images.tar
+          # 3.3. Detener y remover servicios viejos
+          echo 'Deteniendo contenedores viejos...'
+          sudo docker-compose down -v && 
 
-            # 4. Levantar los servicios
-            echo "Desplegando nuevos contenedores..."
-            sudo docker-compose up -d
-            
-            echo "Despliegue completado. Verificar en http://${{ secrets.EC2_HOST }}/"
+          # 🚨 CAMBIO CRÍTICO: Descargar las imágenes del Registry
+          echo 'Descargando nuevas imágenes desde Docker Hub...'
+          sudo docker-compose pull && 
+
+          # 3.4. Levantar los servicios con las imágenes ya descargadas
+          echo 'Desplegando nuevos contenedores...'
+          sudo docker-compose up -d"
+          
+          echo 'Despliegue completado. Verificar en http://${{ secrets.EC2_HOST }}/'
