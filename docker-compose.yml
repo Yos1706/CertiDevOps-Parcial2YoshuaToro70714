@@ -24,8 +24,6 @@ services:
   # 2. SERVICIO DE BACKEND (API)
   # --------------------
   backend:
-    # 🚨 CAMBIO CRÍTICO: Reemplaza 'build' por 'image' de Docker Hub
-    # Reemplaza [TU_DOCKERHUB_USERNAME] por tu nombre de usuario real
     image: yostor172025/my-backend-api:latest
     container_name: backend_api
     restart: always
@@ -45,8 +43,6 @@ services:
   # 3. SERVICIO DE FRONTEND (SPA)
   # --------------------
   frontend:
-    # 🚨 CAMBIO CRÍTICO: Reemplaza 'build' por 'image' de Docker Hub
-    # Reemplaza [TU_DOCKERHUB_USERNAME] por tu nombre de usuario real
     image: yostor172025/my-frontend-spa:latest
     container_name: frontend_spa
     restart: always
