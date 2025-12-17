@@ -1,11 +1,8 @@
 version: '3.8'
 
 services:
-  # --------------------
-  # 1. SERVICIO DE BASE DE DATOS (POSTGRESQL)
-  # --------------------
+  # --- INFRAESTRUCTURA DE BASE DE DATOS ---
   db:
-    # La imagen oficial sigue usando la clave 'image'
     image: postgres:15-alpine
     container_name: postgres_db
     restart: always
@@ -14,15 +11,11 @@ services:
       POSTGRES_PASSWORD: password_segura
       POSTGRES_DB: app_db
     volumes:
-      # El volumen nombrado asegura la persistencia
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      # Puerto de DB expuesto solo para pruebas en desarrollo. En producción, el SG lo bloquea.
-      - "5432:5432"
+      - postgres_data:/var/lib/postgresql/data # Persistencia obligatoria
+    networks:
+      - app-network
 
-  # --------------------
-  # 2. SERVICIO DE BACKEND (API)
-  # --------------------
+  # --- APLICACIÓN: BACKEND ---
   backend:
     image: yostor172025/my-backend-api:latest
     container_name: backend_api
@@ -30,31 +23,97 @@ services:
     ports:
       - "5000:5000"
     environment:
-      NODE_ENV: production # Cambiamos a 'production' en el entorno de despliegue
+      DB_HOST: db
+      DB_PORT: 5432
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password_segura
       POSTGRES_DB: app_db
-      DB_HOST: db
-      DB_PORT: 5432
     depends_on:
       - db
+    networks:
+      - app-network
 
-  # --------------------
-  # 3. SERVICIO DE FRONTEND (SPA)
-  # --------------------
+  # --- APLICACIÓN: FRONTEND (SPA) ---
   frontend:
     image: yostor172025/my-frontend-spa:latest
     container_name: frontend_spa
     restart: always
     ports:
-      - "80:8080"
-    environment:
-      REACT_APP_API_URL: http://backend:5000
+      - "80:8080" # Mapeo corregido para usuario no-root
     depends_on:
       - backend
+    networks:
+      - app-network
 
-# --------------------
-# VOLÚMENES NOMBRADOS
-# --------------------
+  # --- OBSERVABILIDAD: MÉTRICAS (PROMETHEUS) ---
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    networks:
+      - app-network
+
+  # --- OBSERVABILIDAD: LOGS (LOKI + PROMTAIL) ---
+  loki:
+    image: grafana/loki:latest
+    container_name: loki
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./loki/loki-config.yml:/etc/loki/local-config.yaml
+    command: -config.file=/etc/loki/local-config.yaml
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: promtail
+    volumes:
+      - /var/log:/var/log
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro # Para leer logs de Docker
+      - ./promtail/promtail-config.yml:/etc/promtail/config.yml
+    command: -config.file=/etc/promtail/config.yml
+    networks:
+      - app-network
+
+  # --- OBSERVABILIDAD: VISUALIZACIÓN (GRAFANA) ---
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000" # Puerto requerido para evaluación
+    volumes:
+      - grafana_data:/var/lib/grafana # Persistencia de Dashboards
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge
+
 volumes:
   postgres_data:
+  prometheus_data:
+  grafana_data:
