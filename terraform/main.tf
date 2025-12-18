@@ -39,10 +39,22 @@ resource "aws_security_group" "sg_proyecto_final" {
 }
 
 resource "aws_instance" "ec2_proyecto" {
-  ami           = "ami-0fb653ca2d3203ac1" # Ubuntu 22.04 LTS en us-east-2
-  instance_type = "t3.small"               # Recomendado para soportar el monitoreo
-  key_name      = "y672dtAFCT"            # Tu llave pem (sin el .pem)
+  ami           = "ami-0fb653ca2d3203ac1" 
+  instance_type = "t3.small"               
+  key_name      = "y672dtAFCT"            
   vpc_security_group_ids = [aws_security_group.sg_proyecto_final.id]
+
+  # Script de automatización para instalar Docker y Docker Compose
+  user_data = <<-EOF
+              #!/bin/bash
+              sudo apt-get update
+              sudo apt-get install -y docker.io
+              sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.3/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+              sudo systemctl start docker
+              sudo systemctl enable docker
+              sudo usermod -aG docker ubuntu
+              EOF
 
   tags = {
     Name = "EC2-Proyecto-Final-DevOps"
