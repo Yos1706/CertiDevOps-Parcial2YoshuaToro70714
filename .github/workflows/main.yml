@@ -70,17 +70,17 @@ jobs:
   notify:
     runs-on: ubuntu-latest
     needs: deploy
-    if: always() # Se ejecuta aunque falle el despliegue para avisar el estado
+    if: always() 
     steps:
       - name: Enviar Notificación a Discord
-        uses: rjs-team/discord-webhooks-notify@v1
+        uses: sarisia/actions-status-discord@v1
         with:
-          severity: ${{ needs.deploy.result == 'success' && 'info' || 'error' }}
-          details: |
-            **Estado del Despliegue:** ${{ needs.deploy.result == 'success' && '✅ EXITOSO' || '❌ FALLIDO' }}
-            **Proyecto:** ${{ github.repository }}
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          status: ${{ needs.deploy.result }}
+          title: "Despliegue de ${{ github.repository }}"
+          description: |
+            **Estado:** ${{ needs.deploy.result == 'success' && '✅ EXITOSO' || '❌ FALLIDO' }}
             **Autor:** ${{ github.actor }}
-            **Commit:** ${{ github.sha }}
             **URL App:** http://${{ secrets.EC2_HOST }}
             **URL Grafana:** http://${{ secrets.EC2_HOST }}:3000
-          webhookUrl: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          color: ${{ needs.deploy.result == 'success' && 0x00ff00 || 0xff0000 }}
