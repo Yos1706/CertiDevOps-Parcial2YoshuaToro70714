@@ -6,13 +6,13 @@ FROM node:20-slim AS builder
 # Establece el directorio de trabajo
 WORKDIR /app
 
-# 💡 Optimización de Caché: Copia package*.json primero
+# 💡 Optimización de Caché:
 COPY package*.json ./
 
 # Instala dependencias de producción.
 RUN npm install
 
-# Copia el código fuente (después de instalar las dependencias)
+# Copia el código fuente 
 COPY . .
 
 # ----------------------------------------------------
@@ -28,9 +28,9 @@ USER appuser
 WORKDIR /app
 
 # 💡 Multistage Copy: Copia solo los archivos necesarios para la ejecución
-# 1. Copia el paquete de dependencias instalado (node_modules)
+# Copia el paquete de dependencias instalado (node_modules)
 COPY --from=builder /app/node_modules ./node_modules
-# 2. Copia el código fuente (server.js, rutas, etc.)
+# Copia el código fuente (server.js, rutas, etc.)
 COPY --from=builder /app/ ./
 
 # Expone el puerto que la API usa (ej. 5000)
