@@ -1,5 +1,5 @@
 provider "aws" {
-  region = "us-east-2" # Asegúrate de que coincida con tu región anterior
+  region = "us-east-2" 
 }
 
 resource "aws_security_group" "sg_proyecto_final" {
@@ -22,7 +22,7 @@ resource "aws_security_group" "sg_proyecto_final" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Grafana (Observabilidad) - REQUISITO CRÍTICO
+  # Grafana (Observabilidad) 
   ingress {
     from_port   = 3000
     to_port     = 3000
