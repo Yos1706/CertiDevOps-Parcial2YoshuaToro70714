@@ -34,6 +34,7 @@ async function connectToDatabase() {
 
 // Ruta de prueba para verificar que el backend funciona
 app.get('/', (req, res) => {
+  errty
   res.status(200).send('API del Backend funcionando correctamente. Puerto: ' + port);
 });
 
